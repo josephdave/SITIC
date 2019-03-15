@@ -26,7 +26,7 @@ predictor = dlib.shape_predictor(args["shape_predictor"])
 # camera sensor to warm up
 print("[INFO] camera sensor warming up...")
 
-vs = VideoStream(src=0).start()
+vs = VideoStream(src=1).start()
 # vs = VideoStream(usePiCamera=True).start() # Raspberry Pi
 time.sleep(2.0)
 
