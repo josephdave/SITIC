@@ -11,16 +11,16 @@ import cv2
 import numpy as np
 
 # construct the argument parser and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-p", "--shape-predictor", required=True,
-        help="path to facial landmark predictor")
-args = vars(ap.parse_args())
+#ap = argparse.ArgumentParser()
+#ap.add_argument("-p", "--shape-predictor", required=True,
+#        help="path to facial landmark predictor")
+#args = vars(ap.parse_args())
 
 # initialize dlib's face detector (HOG-based) and then create the
 # facial landmark predictor
 print("[INFO] loading facial landmark predictor...")
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(args["shape_predictor"])
+predictor = dlib.shape_predictor("../models/shape_predictor_68_face_landmarks.dat")
 
 # initialize the video stream and sleep for a bit, allowing the
 # camera sensor to warm up
@@ -77,8 +77,12 @@ while True:
                 text = "{} face(s) found".format(len(rects))
                 cv2.putText(frame, text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
 
+
+        caras=0
+        carasmirando=0
         # loop over the face detections
         for rect in rects:
+                        
                 # compute the bounding box of the face and draw it on the
                 # frame
                         (bX, bY, bW, bH) = face_utils.rect_to_bb(rect)
@@ -154,9 +158,25 @@ while True:
                         (success, rotation_vector, translation_vector) = cv2.solvePnP(model_points, image_points, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)#flags=cv2.CV_ITERATIVE)
 
                         text = "{} rotacion".format(rotation_vector)
+                        
                         cv2.putText(frame, text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
                         text = "{} traslacion".format(translation_vector)
                         cv2.putText(frame, text, (20, 70), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
+
+                        rvec_matrix = cv2.Rodrigues(rotation_vector)[0]
+                        proj_matrix = np.hstack((rvec_matrix, translation_vector))
+
+                        euler_angles = cv2.decomposeProjectionMatrix(proj_matrix)[6]
+                        caras+=1
+
+                        #print("ROLL:"+str(euler_angles[2])+" - PITCH:"+str(euler_angles[1])+" - YAW:"+str(euler_angles[0]))
+                        #YAW ES EN ANGULO DE LA CABEZA ARRIBA - ABAJO
+                        if euler_angles[0]<-170:
+                                print("ESTAS MIRANDO "+str(euler_angles[0]));
+                                carasmirando+=1
+                        else:
+                                print("NO ESTAS MIRANDO "+str(euler_angles[0]));
+                                                
                         #print "Rotation Vector:\n {0}".format(rotation_vector)
                         #print "Translation Vector:\n {0}".format(translation_vector)
                         # Project a 3D point (0, 0 , 1000.0) onto the image plane
@@ -170,6 +190,7 @@ while True:
 
                         cv2.line(frame, p1, p2, (255,0,0), 2)
 
+        print("CARAS ENCONTRADAS:("+str(caras)+") - CARAS MIRANDO:("+str(carasmirando)+")")
         # show the frame
         cv2.imshow("Frame", frame)
         key = cv2.waitKey(1) & 0xFF
