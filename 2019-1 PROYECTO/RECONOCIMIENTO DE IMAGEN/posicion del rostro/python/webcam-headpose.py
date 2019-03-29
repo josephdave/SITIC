@@ -9,6 +9,7 @@ import time
 import dlib
 import cv2
 import numpy as np
+import time
 
 # construct the argument parser and parse the arguments
 #ap = argparse.ArgumentParser()
@@ -26,7 +27,7 @@ predictor = dlib.shape_predictor("../models/shape_predictor_68_face_landmarks.da
 # camera sensor to warm up
 print("[INFO] camera sensor warming up...")
 
-vs = VideoStream(src=1).start()
+vs = VideoStream(src=0).start()
 # vs = VideoStream(usePiCamera=True).start() # Raspberry Pi
 time.sleep(2.0)
 
@@ -58,6 +59,15 @@ model_points = np.array([
                             (150.0, -150.0, -125.0)      # Right mouth corner 55
 
                         ])
+estabamirando=0 
+start=0
+end = 0
+segtotal=0
+maxcaras=0
+bigstart= time.time() #timestamp de cuando inicia el procesamiento
+bigend=0
+
+
 
 while True:
         # grab the frame from the threaded video stream, resize it to
@@ -78,8 +88,12 @@ while True:
                 cv2.putText(frame, text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
 
 
+        if(maxcaras<len(rects)):
+                maxcaras = len(rects)
         caras=0
         carasmirando=0
+       
+       
         # loop over the face detections
         for rect in rects:
                         
@@ -174,8 +188,19 @@ while True:
                         if euler_angles[0]<-170:
                                 print("ESTAS MIRANDO "+str(euler_angles[0]));
                                 carasmirando+=1
+                                if estabamirando == 0:
+                                       estabamirando = 1
+                                       #segtotal+=1
+                                       start=time.time()
+                                        
                         else:
                                 print("NO ESTAS MIRANDO "+str(euler_angles[0]));
+                                if estabamirando == 1:
+                                        estabamirando = 0
+                                        end = time.time()
+                                        segtotal+=(end-start)
+                                        end = 0
+                                        start = 0
                                                 
                         #print "Rotation Vector:\n {0}".format(rotation_vector)
                         #print "Translation Vector:\n {0}".format(translation_vector)
@@ -191,14 +216,21 @@ while True:
                         cv2.line(frame, p1, p2, (255,0,0), 2)
 
         print("CARAS ENCONTRADAS:("+str(caras)+") - CARAS MIRANDO:("+str(carasmirando)+")")
+
+        
         # show the frame
         cv2.imshow("Frame", frame)
         key = cv2.waitKey(1) & 0xFF
 
         # if the `q` key was pressed, break from the loop
         if key == ord("q"):
+                bigend=time.time()              
+                print("TOTAL CARAS ENCONTRADAS: "+str(maxcaras))
+                print("TIEMPO MIRANDO TOTAL: "+str(segtotal))
+                print("TIEMPO TOTAL: "+str(bigend-bigstart))
+                print("PORCENTAJE DE ATENCION: "+str((segtotal)/(bigend-bigstart)*maxcaras)+"%")
                 break
-#
+
 print(image_points)
 
 # do a bit of cleanup
