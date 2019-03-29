@@ -27,7 +27,7 @@ predictor = dlib.shape_predictor("../models/shape_predictor_68_face_landmarks.da
 # camera sensor to warm up
 print("[INFO] camera sensor warming up...")
 
-vs = VideoStream(src=0).start()
+vs = VideoStream(src=1).start()
 # vs = VideoStream(usePiCamera=True).start() # Raspberry Pi
 time.sleep(2.0)
 
@@ -59,9 +59,11 @@ model_points = np.array([
                             (150.0, -150.0, -125.0)      # Right mouth corner 55
 
                         ])
-estabamirando=0 
-start=0
-end = 0
+
+estabamirando=[0,0,0,0,0]
+start=[0,0,0,0,0]
+end = [0,0,0,0,0]
+numeroCara=0
 segtotal=0
 maxcaras=0
 bigstart= time.time() #timestamp de cuando inicia el procesamiento
@@ -87,14 +89,15 @@ while True:
                 text = "{} face(s) found".format(len(rects))
                 cv2.putText(frame, text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
 
-
+        ##
         if(maxcaras<len(rects)):
                 maxcaras = len(rects)
         caras=0
         carasmirando=0
-       
+        ##
        
         # loop over the face detections
+        numeroCara=0
         for rect in rects:
                         
                 # compute the bounding box of the face and draw it on the
@@ -169,6 +172,8 @@ while True:
                         #print "Camera Matrix :\n {0}".format(camera_matrix)
 
                         dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
+
+                        
                         (success, rotation_vector, translation_vector) = cv2.solvePnP(model_points, image_points, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)#flags=cv2.CV_ITERATIVE)
 
                         text = "{} rotacion".format(rotation_vector)
@@ -185,22 +190,22 @@ while True:
 
                         #print("ROLL:"+str(euler_angles[2])+" - PITCH:"+str(euler_angles[1])+" - YAW:"+str(euler_angles[0]))
                         #YAW ES EN ANGULO DE LA CABEZA ARRIBA - ABAJO
-                        if euler_angles[0]<-170:
-                                print("ESTAS MIRANDO "+str(euler_angles[0]));
+                        if euler_angles[0]<-150 and euler_angles[0]>-170:
+                                print("ESTAS MIRANDO "+str(numeroCara)+" : "+str(euler_angles[0]));
                                 carasmirando+=1
-                                if estabamirando == 0:
-                                       estabamirando = 1
+                                if estabamirando[numeroCara] == 0:
+                                       estabamirando[numeroCara] = 1
                                        #segtotal+=1
-                                       start=time.time()
+                                       start[numeroCara]=time.time()
                                         
                         else:
-                                print("NO ESTAS MIRANDO "+str(euler_angles[0]));
-                                if estabamirando == 1:
-                                        estabamirando = 0
-                                        end = time.time()
-                                        segtotal+=(end-start)
-                                        end = 0
-                                        start = 0
+                                print("NO ESTAS MIRANDO "+str(numeroCara)+" : "+str(euler_angles[0]));
+                                if estabamirando[numeroCara] == 1:
+                                        estabamirando[numeroCara] = 0
+                                        end[numeroCara] = time.time()
+                                        segtotal+=(end[numeroCara]-start[numeroCara])
+                                        end[numeroCara] = 0
+                                        start[numeroCara] = 0
                                                 
                         #print "Rotation Vector:\n {0}".format(rotation_vector)
                         #print "Translation Vector:\n {0}".format(translation_vector)
@@ -214,8 +219,9 @@ while True:
                         p2 = ( int(nose_end_point2D[0][0][0]), int(nose_end_point2D[0][0][1]))
 
                         cv2.line(frame, p1, p2, (255,0,0), 2)
-
-        print("CARAS ENCONTRADAS:("+str(caras)+") - CARAS MIRANDO:("+str(carasmirando)+")")
+                        numeroCara+=1
+        
+       # print("CARAS ENCONTRADAS:("+str(caras)+") - CARAS MIRANDO:("+str(carasmirando)+")")
 
         
         # show the frame
@@ -228,7 +234,7 @@ while True:
                 print("TOTAL CARAS ENCONTRADAS: "+str(maxcaras))
                 print("TIEMPO MIRANDO TOTAL: "+str(segtotal))
                 print("TIEMPO TOTAL: "+str(bigend-bigstart))
-                print("PORCENTAJE DE ATENCION: "+str((segtotal)/(bigend-bigstart)*maxcaras)+"%")
+                print("PORCENTAJE DE ATENCION: "+str(((segtotal)/((bigend-bigstart)*maxcaras))*100)+"%")
                 break
 
 print(image_points)
