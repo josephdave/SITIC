@@ -17,6 +17,7 @@ import subprocess
 import os
 import time
 import threading
+import audioop
 
 class Recorder():
     #Defines sound properties like frequency and channels
@@ -27,6 +28,7 @@ class Recorder():
         self.RATE = rate
         self._running = True
         self._frames = []
+        self.vol = 0
 
     #Start recording sound
     def start(self):
@@ -49,6 +51,11 @@ class Recorder():
         while(self._running):
             data = stream.read(self.CHUNK)
             self._frames.append(data)
+            #dat=np.frombuffer(data,dtype=np.int16)
+            #self.vol=np.average(np.abs(dat))*2
+            rms=audioop.rms(data,2)
+            if(rms>0):
+                self.vol = 20 * np.log10(rms)
 
         # Interrupted, stop stream and close it. Terinate pyaudio process.
         stream.stop_stream()
@@ -59,9 +66,18 @@ class Recorder():
     def stop(self):
         self._running = False
 
+    def getVol(self):
+        #bars="#"*int(50*self.vol/2**16)
+        # bars = "|"*int(100/(self.vol+1))
+        print ("|" * int((self.vol-35)*2))
+        #print (self.vol)
+        #print(bars)
+
+  
+        
     #Save file to filename location as a wavefront file.
     def save(self, filename):
-        print("Saving")
+        #print("Saving")
         p = pyaudio.PyAudio()
         if not filename.endswith(".wav"):
             filename = filename + ".wav"
@@ -71,7 +87,7 @@ class Recorder():
         wf.setframerate(self.RATE)
         wf.writeframes(b''.join(self._frames))
         wf.close()
-        print("Saved")
+        #print("Saved")
 
     # Delete a file
     @staticmethod
@@ -89,7 +105,6 @@ class Recorder():
         subprocess.call('ffmpeg -i "'+wav+'" "'+mp3+'"')
 
 
-
 # construct the argument parser and parse the arguments
 #ap = argparse.ArgumentParser()
 #ap.add_argument("-p", "--shape-predictor", required=True,
@@ -98,13 +113,13 @@ class Recorder():
 
 # initialize dlib's face detector (HOG-based) and then create the
 # facial landmark predictor
-print("[INFO] loading facial landmark predictor...")
+print("[INFO] CARGANDO INFORMACION DE DETECCION")
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("../models/shape_predictor_68_face_landmarks.dat")
 
 # initialize the video stream and sleep for a bit, allowing the
 # camera sensor to warm up
-print("[INFO] camera sensor warming up...")
+print("[INFO] ACTIVANDO CAMARA...")
 
 vs = VideoStream(src=0).start()
 # vs = VideoStream(usePiCamera=True).start() # Raspberry Pi
@@ -139,7 +154,7 @@ model_points = np.array([
 
                         ])
 rec = Recorder()
-print("Start recording")
+print("INICIA GRABACION DE AUDIO")
 rec.start()
 estabamirando=[0,0,0,0,0]
 start=[0,0,0,0,0]
@@ -164,8 +179,8 @@ while True:
         # check to see if a face was detected, and if so, draw the total
         # number of faces on the frame
         if len(rects) > 0:
-                text = "{} face(s) found".format(len(rects))
-                cv2.putText(frame, text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
+                text = "{} CARAS DETECTADAS".format(len(rects))
+                cv2.putText(frame, text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 0), 2)
 
         ##
         if(maxcaras<len(rects)):
@@ -181,7 +196,7 @@ while True:
                 # compute the bounding box of the face and draw it on the
                 # frame
                         (bX, bY, bW, bH) = face_utils.rect_to_bb(rect)
-                        cv2.rectangle(frame, (bX, bY), (bX + bW, bY + bH),(0, 255, 0), 1)
+                        cv2.rectangle(frame, (bX, bY), (bX + bW, bY + bH),(0, 0, 255), 1)
                 # determine the facial landmarks for the face region, then
                 # convert the facial landmark (x, y)-coordinates to a NumPy
                 # array
@@ -254,11 +269,11 @@ while True:
                         
                         (success, rotation_vector, translation_vector) = cv2.solvePnP(model_points, image_points, camera_matrix, dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)#flags=cv2.CV_ITERATIVE)
 
-                        text = "{} rotacion".format(rotation_vector)
-                        
-                        cv2.putText(frame, text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
-                        text = "{} traslacion".format(translation_vector)
-                        cv2.putText(frame, text, (20, 70), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
+                        #text = "{} rotacion".format(rotation_vector)
+                        #
+                        #cv2.putText(frame, text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
+                        #text = "{} traslacion".format(translation_vector)
+                        #cv2.putText(frame, text, (20, 70), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 2)
 
                         rvec_matrix = cv2.Rodrigues(rotation_vector)[0]
                         proj_matrix = np.hstack((rvec_matrix, translation_vector))
@@ -269,7 +284,8 @@ while True:
                         #print("ROLL:"+str(euler_angles[2])+" - PITCH:"+str(euler_angles[1])+" - YAW:"+str(euler_angles[0]))
                         #YAW ES EN ANGULO DE LA CABEZA ARRIBA - ABAJO
                         if euler_angles[0]<-150 and euler_angles[0]>-170:
-                                print("ESTAS MIRANDO "+str(numeroCara)+" : "+str(euler_angles[0]));
+                                cv2.rectangle(frame, (bX, bY), (bX + bW, bY + bH),(0, 255, 0), 1)
+                                #print("ESTAS MIRANDO "+str(numeroCara)+" : "+str(euler_angles[0]));
                                 carasmirando+=1
                                 if estabamirando[numeroCara] == 0:
                                        estabamirando[numeroCara] = 1
@@ -277,7 +293,7 @@ while True:
                                        start[numeroCara]=time.time()
                                         
                         else:
-                                print("NO ESTAS MIRANDO "+str(numeroCara)+" : "+str(euler_angles[0]));
+                                #print("NO ESTAS MIRANDO "+str(numeroCara)+" : "+str(euler_angles[0]));
                                 if estabamirando[numeroCara] == 1:
                                         estabamirando[numeroCara] = 0
                                         end[numeroCara] = time.time()
@@ -301,19 +317,22 @@ while True:
         
        # print("CARAS ENCONTRADAS:("+str(caras)+") - CARAS MIRANDO:("+str(carasmirando)+")")
 
+        text = "{} CARAS MIRANDO".format(carasmirando)
+        cv2.putText(frame, text, (10, 40), cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 0), 2)
         
         # show the frame
         cv2.imshow("Frame", frame)
         key = cv2.waitKey(1) & 0xFF
+        rec.getVol()
 
         # if the `q` key was pressed, break from the loop
         if key == ord("q"):
                 bigend=time.time()              
                 print("TOTAL CARAS ENCONTRADAS: "+str(maxcaras))
-                print("TIEMPO MIRANDO TOTAL: "+str(segtotal))
-                print("TIEMPO TOTAL: "+str(bigend-bigstart))
-                print("PORCENTAJE DE ATENCION: "+str(((segtotal)/((bigend-bigstart)*maxcaras))*100)+"%")
-                print("Stop recording")
+                print("TIEMPO MIRANDO TOTAL: "+str('{0:.3g}'.format(segtotal/60))+" minutos")
+                print("TIEMPO TOTAL: "+str('{0:.3g}'.format((bigend-bigstart)/60))+" minutos")
+                print("PORCENTAJE DE ATENCION: "+str('{0:.3g}'.format(((segtotal)/((bigend-bigstart)*maxcaras))*100))+"%")
+                #print("Stop recording")
                 rec.stop()
                 print("GUARDANDO ARCHIVO DE AUDIO")
                 rec.save("test.wav")
@@ -323,7 +342,7 @@ while True:
 
                 break
 
-print(image_points)
+#print(image_points)
 
 # do a bit of cleanup
 cv2.destroyAllWindows()

@@ -84,7 +84,7 @@ def print_sound(indata, outdata, frames, time, status):
     #print(str(volume_norm))
 
 rec = Recorder()
-duration = 20  # seconds
+duration = 3*60  # seconds
 print("INICIA GRABACICION")
 rec.start()
 with sd.Stream(callback=print_sound):
